@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     scraper_interval_minutes: int = 15
     demo_city: str = "Chicago"
     cors_origins: list[str] = ["http://localhost:5173"]
+    acled_api_key: str = ""
+    acled_api_email: str = ""
+    openweather_api_key: str = ""
 
     model_config = {"env_file": ".env"}
 
