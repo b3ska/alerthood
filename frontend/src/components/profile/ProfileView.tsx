@@ -33,10 +33,10 @@ export function ProfileView() {
           )}
         </div>
         <h2 className="font-headline text-3xl font-bold uppercase tracking-tight">{displayName}</h2>
-        <p className="font-body text-on-surface-variant text-sm">{email}</p>
         {profile?.username && (
-          <p className="font-body text-on-surface-variant text-xs mt-1">@{profile.username}</p>
+          <p className="font-body text-on-surface-variant text-sm">@{profile.username}</p>
         )}
+        <p className="font-body text-on-surface-variant text-xs mt-0.5">{email}</p>
       </section>
 
       <MetricsBento
