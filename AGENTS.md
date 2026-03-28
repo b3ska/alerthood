@@ -50,6 +50,27 @@
 5. **Document Results**: Add review to 'tasks/todo.md'
 6. **Capture Lessons**: Update 'tasks/lessons.md' after corrections
 
+## Tech Stack
+
+### Backend
+- **FastAPI** (Python) — API server, business logic, background jobs
+- **Supabase** (via CLI) — Postgres database, Auth, Realtime subscriptions, Storage
+
+### Frontend
+- **React** + **TypeScript** — SPA with component-based architecture
+- Interactive map via **MapLibre GL** (open-source, no API key needed)
+
+### Tooling
+- Supabase CLI for local dev, migrations, and type generation
+- FastAPI with `alembic` for any migration needs outside Supabase
+- `pnpm` for frontend package management
+
+### Architecture
+- FastAPI serves REST API; frontend talks to FastAPI (not Supabase directly)
+- Supabase Auth used via FastAPI middleware (frontend gets JWT, sends to API)
+- Supabase Realtime for push notifications (websocket subscriptions)
+- Map tiles: OpenStreetMap + MapLibre GL JS
+
 ## Core Principles
 
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
