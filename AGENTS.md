@@ -1,11 +1,11 @@
 ## Workflow Orchestration
 
-### 1. PLAN.md Default
+### 1. Plan Mode Default
 
-- Use PLAN.md for ANY non-trivial task (3+ steps or architectural decisions)
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan immediately - don't keep pushing
-- Use PLAN.md for verification steps, not just building
-- Write detailed specs to SPECS.md upfront to reduce ambiguity
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
 
 ### 2. Subagent Strategy to keep main context window clean
 
@@ -25,7 +25,7 @@
 - Never mark a task complete without proving it works
 - Diff behavior between main and your changes when relevant
 - Ask yourself: "Would a staff engineer approve this?"
-- Run tests, check logs, demonstrate correctness. (Note: These tests are for you to verify that the functionality you wrote works. The actual tests that you implement in the project should be minimal. The priority is business logic.)
+- Run tests, check logs, demonstrate correctness
 
 ### 5. Demand Elegance (Balanced)
 
@@ -49,27 +49,6 @@
 4. **Explain Changes**: High-level summary at each step
 5. **Document Results**: Add review to 'tasks/todo.md'
 6. **Capture Lessons**: Update 'tasks/lessons.md' after corrections
-
-## Tech Stack
-
-### Backend
-- **FastAPI** (Python) — API server, business logic, background jobs
-- **Supabase** (via CLI) — Postgres database, Auth, Realtime subscriptions, Storage
-
-### Frontend
-- **React** + **TypeScript** — SPA with component-based architecture
-- Interactive map via **MapLibre GL** (open-source, no API key needed)
-
-### Tooling
-- Supabase CLI for local dev, migrations, and type generation (`supabase gen types typescript`)
-- `pnpm` for frontend package management
-
-### Architecture
-- **Thin API + Supabase Direct** pattern:
-  - **Reads:** Frontend reads directly via Supabase JS client (including Realtime subscriptions)
-  - **Writes:** All mutations go through FastAPI (business logic, karma, badges, streaks, severity)
-  - **Auth:** Supabase Auth issues JWT → frontend stores it → sends to FastAPI in Authorization header → FastAPI validates via Supabase JWT secret
-- Map tiles: CartoDB Dark Matter via MapLibre GL JS (free, no API key)
 
 ## Core Principles
 
