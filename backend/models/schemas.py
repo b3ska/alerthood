@@ -79,3 +79,43 @@ class NotificationPrefsUpdate(BaseModel):
     notification_natural: bool | None = None
     notification_disturbance: bool | None = None
     min_severity: SeverityLevel | None = None
+
+
+# --- Routes ---
+
+
+class RouteRequest(BaseModel):
+    origin_lat: float = Field(ge=-90, le=90)
+    origin_lng: float = Field(ge=-180, le=180)
+    dest_lat: float = Field(ge=-90, le=90)
+    dest_lng: float = Field(ge=-180, le=180)
+
+
+class RouteWaypoint(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+
+
+class SafeRouteResponse(BaseModel):
+    waypoints: list[RouteWaypoint] = Field(min_length=2)
+    google_maps_url: str
+    avoided_events: int = Field(ge=0)
+    distance_km: float = Field(ge=0)
+
+
+# --- Neighborhood Scores ---
+
+
+class NeighborhoodScore(BaseModel):
+    area_id: str
+    area_name: str
+    crime_count: int = Field(ge=0)
+    crime_rate_per_km2: float = Field(ge=0)
+    poverty_index: float = Field(ge=0, le=50)
+    safety_score: float = Field(ge=0, le=100)
+    score_updated_at: datetime | None
+
+
+class NeighborhoodScoresResponse(BaseModel):
+    scores: list[NeighborhoodScore]
+    computed_at: datetime

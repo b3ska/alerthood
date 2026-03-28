@@ -1,16 +1,34 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from supabase import Client
 
 from auth import get_current_user
 from db import get_supabase
 from models.schemas import NotificationPrefsUpdate, SubscribeRequest, SubscribeResponse
+from services.geocoding import detect_area_from_coords
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["areas"])
 
 MAX_FREE_SUBSCRIPTIONS = 2
+
+
+@router.get("/areas/detect")
+async def detect_area(
+    lat: float = Query(ge=-90, le=90),
+    lng: float = Query(ge=-180, le=180),
+    user_id: str = Depends(get_current_user),
+):
+    """Auto-detect area from coordinates."""
+    try:
+        area = await detect_area_from_coords(lat, lng)
+    except Exception as e:
+        logger.error(f"Area detection failed: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Area detection temporarily unavailable")
+    if not area:
+        return {"area": None, "message": "No monitored area found near your location"}
+    return {"area": area}
 
 
 @router.post("/areas/subscribe", response_model=SubscribeResponse, status_code=201)
