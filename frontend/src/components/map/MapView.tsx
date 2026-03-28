@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from 'react-leaflet'
 import { useHeatmap } from '../../hooks/useHeatmap'
 import { MonitoredZone } from './MonitoredZone'
@@ -28,9 +29,15 @@ function FlyTo({ position }: { position: [number, number] }) {
 }
 
 export function MapView() {
+  const [searchParams] = useSearchParams()
   const [userPos, setUserPos] = useState<[number, number] | null>(null)
   const homeArea = MOCK_PROFILE.areas.find((a) => a.name === 'HOME')
   const { cells, loading } = useHeatmap(homeArea?.id ?? null)
+
+  const targetLat = searchParams.get('lat')
+  const targetLng = searchParams.get('lng')
+  const flyTarget: [number, number] | null =
+    targetLat && targetLng ? [parseFloat(targetLat), parseFloat(targetLng)] : null
 
   function locateUser() {
     navigator.geolocation.getCurrentPosition(
@@ -59,7 +66,7 @@ export function MapView() {
         >
           <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
 
-          {userPos && <FlyTo position={userPos} />}
+          {flyTarget ? <FlyTo position={flyTarget} /> : userPos && <FlyTo position={userPos} />}
 
           {userPos && (
             <>

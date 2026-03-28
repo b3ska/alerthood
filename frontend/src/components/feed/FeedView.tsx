@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import type { Threat, ThreatCategory, ThreatSeverity } from '../../types'
@@ -29,6 +30,7 @@ interface FeedItem {
 
 export function FeedView() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState<FilterValue>('ALL')
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,7 +41,7 @@ export function FeedView() {
 
       const { data: events } = await supabase
         .from('events')
-        .select('id, title, threat_type, severity, relevance_score, occurred_at, location_label, source_type')
+        .select('id, title, threat_type, severity, relevance_score, occurred_at, location_label, source_type, location')
         .eq('status', 'active')
         .order('occurred_at', { ascending: false })
         .limit(50)
@@ -86,8 +88,8 @@ export function FeedView() {
               severityPct: SEVERITY_PCT[e.severity] ?? 50,
               relevancePct: e.relevance_score,
               location: e.location_label ?? '',
-              lat: 0,
-              lng: 0,
+              lat: e.location?.coordinates?.[1] ?? 0,
+              lng: e.location?.coordinates?.[0] ?? 0,
               minutesAgo,
               upvotes: upMap[e.id] ?? 0,
               downvotes: downMap[e.id] ?? 0,
@@ -145,7 +147,12 @@ export function FeedView() {
           </div>
         ) : (
           filtered.map((item) => (
-            <ThreatCard key={item.threat.id} threat={item.threat} initialVote={item.userVote} />
+            <ThreatCard
+              key={item.threat.id}
+              threat={item.threat}
+              initialVote={item.userVote}
+              onViewMap={(t) => navigate(`/map?lat=${t.lat}&lng=${t.lng}`)}
+            />
           ))
         )}
       </div>
