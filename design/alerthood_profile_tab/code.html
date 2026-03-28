@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Space+Grotesk:wght@700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-container": "#633700",
+              "error-container": "#93000a",
+              "tertiary-fixed-dim": "#e8b3ff",
+              "inverse-primary": "#c0000a",
+              "on-background": "#e5e2e1",
+              "surface-bright": "#393939",
+              "on-error-container": "#ffdad6",
+              "on-tertiary-container": "#460066",
+              "primary-fixed-dim": "#ffb4aa",
+              "surface-container-high": "#2a2a2a",
+              "background": "#131313",
+              "surface-variant": "#353534",
+              "tertiary-fixed": "#f6d9ff",
+              "tertiary": "#e8b3ff",
+              "surface-container-highest": "#353534",
+              "tertiary-container": "#c567f4",
+              "on-primary": "#690003",
+              "primary-container": "#ff5545",
+              "surface": "#131313",
+              "surface-container": "#201f1f",
+              "error": "#ffb4ab",
+              "primary": "#ffb4aa",
+              "on-secondary": "#4b2800",
+              "secondary-fixed-dim": "#ffb874",
+              "outline": "#ad8883",
+              "secondary-fixed": "#ffdcbf",
+              "surface-container-lowest": "#0e0e0e",
+              "primary-fixed": "#ffdad5",
+              "outline-variant": "#5d3f3b",
+              "on-primary-container": "#5c0002",
+              "surface-dim": "#131313",
+              "on-primary-fixed-variant": "#930005",
+              "on-tertiary": "#510074",
+              "on-tertiary-fixed": "#310048",
+              "secondary": "#ffbc7c",
+              "surface-container-low": "#1c1b1b",
+              "on-secondary-fixed": "#2d1600",
+              "inverse-on-surface": "#313030",
+              "secondary-container": "#fe9400",
+              "on-error": "#690005",
+              "on-secondary-fixed-variant": "#6a3b00",
+              "surface-tint": "#ffb4aa",
+              "on-surface": "#e5e2e1",
+              "on-surface-variant": "#e7bdb7",
+              "on-primary-fixed": "#410001",
+              "inverse-surface": "#e5e2e1",
+              "on-tertiary-fixed-variant": "#7201a2"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .hard-shadow { box-shadow: 4px 4px 0px #000000; }
+        .active-tab-border { border-top: 4px solid #FF5545; }
+        .circular-progress {
+            background: conic-gradient(#4ade80 98%, #2a2a2a 0);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .circular-inner {
+            background: #201f1f;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#131313] border-b-2 border-black shadow-[4px_4px_0px_#000000]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#FF5545]">security</span>
+<h1 class="font-headline font-black uppercase tracking-tighter text-2xl italic text-[#FF5545]">ALERTHOOD</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center hover:bg-[#2A2A2A] transition-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+<span class="material-symbols-outlined text-white">notifications</span>
+</button>
+</header>
+<main class="mt-20 px-4 space-y-8">
+<!-- Profile Header -->
+<section class="flex flex-col items-center pt-4">
+<div class="w-24 h-24 bg-surface-container border-4 border-black hard-shadow rounded-full flex items-center justify-center mb-4 overflow-hidden">
+<span class="material-symbols-outlined text-5xl text-primary" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</div>
+<h2 class="font-headline text-3xl font-bold uppercase tracking-tight">Alex J.</h2>
+<p class="font-body text-on-surface-variant text-sm">alex@email.com</p>
+</section>
+<!-- Metrics Bento Grid -->
+<section class="grid grid-cols-2 gap-4">
+<div class="col-span-1 bg-on-background p-4 border-2 border-black hard-shadow rounded-xl flex flex-col justify-between aspect-square">
+<span class="font-label text-[10px] font-black text-black uppercase tracking-widest">KARMA</span>
+<div class="flex flex-col">
+<span class="font-headline text-4xl font-black text-black">1250</span>
+<span class="font-label text-[10px] text-black/60 font-bold italic">+42 THIS WEEK</span>
+</div>
+</div>
+<div class="col-span-1 bg-surface-container p-4 border-2 border-black hard-shadow rounded-xl flex flex-col items-center justify-center space-y-2">
+<div class="circular-progress">
+<div class="circular-inner">
+<span class="font-headline text-xl font-bold text-on-surface">98%</span>
+</div>
+</div>
+<span class="font-label text-[10px] font-black uppercase tracking-widest">TRUST SCORE</span>
+</div>
+<div class="col-span-2 bg-secondary-container p-4 border-2 border-black hard-shadow rounded-xl flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-3xl text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="font-headline text-2xl font-bold text-on-secondary-container uppercase">7 DAY STREAK</span>
+</div>
+<span class="material-symbols-outlined text-on-secondary-container">trending_up</span>
+</div>
+</section>
+<!-- Badge Grid -->
+<section class="space-y-4">
+<h3 class="font-headline text-xl font-bold uppercase tracking-tight flex items-center gap-2">
+<span class="w-6 h-1 bg-primary"></span> ACHIEVEMENTS
+            </h3>
+<div class="grid grid-cols-3 gap-3">
+<div class="bg-surface-container border-2 border-black hard-shadow p-3 rounded-lg flex flex-col items-center text-center gap-2">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">medical_services</span>
+<span class="text-[10px] font-bold leading-none uppercase">First Responder</span>
+</div>
+<div class="bg-surface-container border-2 border-black hard-shadow p-3 rounded-lg flex flex-col items-center text-center gap-2">
+<span class="material-symbols-outlined text-secondary text-3xl" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="text-[10px] font-bold leading-none uppercase">Top Contributor</span>
+</div>
+<div class="bg-surface-container border-2 border-black hard-shadow p-3 rounded-lg flex flex-col items-center text-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-3xl" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<span class="text-[10px] font-bold leading-none uppercase">Verified Resident</span>
+</div>
+<div class="bg-surface-container-low border-2 border-black opacity-40 p-3 rounded-lg flex flex-col items-center text-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">shield</span>
+<span class="text-[10px] font-bold leading-none uppercase">Night Watch</span>
+</div>
+<div class="bg-surface-container-low border-2 border-black opacity-40 p-3 rounded-lg flex flex-col items-center text-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">map</span>
+<span class="text-[10px] font-bold leading-none uppercase">Mapper</span>
+</div>
+<div class="bg-surface-container-low border-2 border-black opacity-40 p-3 rounded-lg flex flex-col items-center text-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">groups</span>
+<span class="text-[10px] font-bold leading-none uppercase">Community Lead</span>
+</div>
+</div>
+</section>
+<!-- Monitored Areas -->
+<section class="space-y-4">
+<h3 class="font-headline text-xl font-bold uppercase tracking-tight flex items-center gap-2">
+<span class="w-6 h-1 bg-secondary"></span> MONITORED AREAS
+            </h3>
+<!-- Area Card 1 -->
+<div class="bg-surface-container border-2 border-black hard-shadow rounded-xl overflow-hidden">
+<div class="h-32 w-full relative bg-surface-container-lowest">
+<img class="w-full h-full object-cover opacity-60 grayscale" data-alt="simplified dark mode vector map showing urban grid with neon location pin markers" data-location="Chicago" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCb-OQ6aBiLcxu8NvKvDO46OP7m0SbQf2kGRf0VO6NmY4r8GpQvZhQ763Ke38twsKGWdzKQ-2eAJariQztwEXfxdU7_6uTVVWBCo_lNmyEw-vWQks5oHgfeRT4_zD8ZpmNlkEGz78_AyUpQAMTitXFIYwqgxBa4pGNrSDZgT5w6C3YP0zcMmLICkiucvoGJNzYhV8Q5aCBP0ZgTLeH5GyxIiVi0PR0nBBoypeaRH8kbgRE4A_NykPcDxrFXwehy8F-BI922kePjT1pM"/>
+<div class="absolute top-2 right-2 flex gap-2">
+<button class="bg-surface p-2 border-2 border-black hard-shadow rounded-full active:shadow-none active:translate-x-[1px] active:translate-y-[1px]">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+<div class="absolute bottom-2 left-3 bg-black/80 px-2 py-1 border border-primary">
+<span class="text-[10px] font-black uppercase text-primary italic">ACTIVE SHIELD ON</span>
+</div>
+</div>
+<div class="p-4 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-headline text-lg font-bold">HOME</h4>
+<p class="text-xs font-label text-on-surface-variant">5MI RADIUS • WEST LOOP</p>
+</div>
+</div>
+<!-- Notification Toggles -->
+<div class="grid grid-cols-2 gap-2">
+<div class="flex items-center justify-between bg-surface-container-low p-2 border border-outline-variant rounded-lg">
+<span class="text-[10px] font-bold uppercase tracking-tighter">CRIME</span>
+<div class="w-8 h-4 bg-primary-container rounded-full relative flex items-center px-1">
+<div class="w-2 h-2 bg-on-primary-container rounded-full ml-auto"></div>
+</div>
+</div>
+<div class="flex items-center justify-between bg-surface-container-low p-2 border border-outline-variant rounded-lg">
+<span class="text-[10px] font-bold uppercase tracking-tighter">INFRA</span>
+<div class="w-8 h-4 bg-primary-container rounded-full relative flex items-center px-1">
+<div class="w-2 h-2 bg-on-primary-container rounded-full ml-auto"></div>
+</div>
+</div>
+<div class="flex items-center justify-between bg-surface-container-low p-2 border border-outline-variant rounded-lg">
+<span class="text-[10px] font-bold uppercase tracking-tighter">NATURAL</span>
+<div class="w-8 h-4 bg-primary-container rounded-full relative flex items-center px-1">
+<div class="w-2 h-2 bg-on-primary-container rounded-full ml-auto"></div>
+</div>
+</div>
+<div class="flex items-center justify-between bg-surface-container-low p-2 border border-outline-variant rounded-lg">
+<span class="text-[10px] font-bold uppercase tracking-tighter">DISTURB</span>
+<div class="w-8 h-4 bg-surface-variant rounded-full relative flex items-center px-1">
+<div class="w-2 h-2 bg-on-surface-variant rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Area Card 2 -->
+<div class="bg-surface-container border-2 border-black hard-shadow rounded-xl overflow-hidden">
+<div class="h-24 w-full relative bg-surface-container-lowest">
+<img class="w-full h-full object-cover opacity-40 grayscale" data-alt="minimalist dark topography map with highlighted zone around high-rise office buildings" data-location="Downtown Chicago" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCF0H1WDkp7cp8CImizcwnwYRdEQWaNFuYP7SYZxr9y8AgMKbOrSfQi4kP4xWJo8e44r8dXmdslH3EF3VVm8vazs8WhHJZKG9tyhXwy8_zByOmF3P1m8YvaMshxN5SRdiKTS54JnW0jSt4rTOm0oPFAO1QC8U19zPXoK1iI0Dr9CFYET79EHi4ScmBD3Rx2ilB8Fbswp94kWLACyf1s8VPWXZzctD8mr_Czeb22Kr76MYaTDrAVAUBQetVSjmo8HoGm1Fow-FmSli_9"/>
+<div class="absolute top-2 right-2 flex gap-2">
+<button class="bg-surface p-2 border-2 border-black hard-shadow rounded-full active:shadow-none active:translate-x-[1px] active:translate-y-[1px]">
+<span class="material-symbols-outlined text-sm text-error">delete</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex justify-between items-center">
+<div>
+<h4 class="font-headline text-lg font-bold">WORK</h4>
+<p class="text-xs font-label text-on-surface-variant">2MI RADIUS • RIVER NORTH</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="pb-12">
+<button class="w-full py-4 border-2 border-black font-headline font-bold text-error uppercase tracking-widest hover:bg-error-container hover:text-white transition-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+                LOGOUT SESSION
+            </button>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 pb-safe bg-[#131313] border-t-2 border-black">
+<a class="flex flex-col items-center justify-center text-gray-500 py-2 px-4 hover:text-white transition-none active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1">map</span>
+<span class="font-headline font-bold text-[10px] tracking-widest">MAP</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 py-2 px-4 hover:text-white transition-none active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1">dynamic_feed</span>
+<span class="font-headline font-bold text-[10px] tracking-widest">FEED</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#FF5545] bg-[#201F1F] py-2 px-4 border-t-4 border-[#FF5545] active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-headline font-bold text-[10px] tracking-widest">PROFILE</span>
+</a>
+</nav>
+</body></html>
