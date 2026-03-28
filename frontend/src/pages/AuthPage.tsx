@@ -108,7 +108,7 @@ export function AuthPage() {
                     type="text"
                     value={displayName}
                     onChange={e => setDisplayName(e.target.value)}
-                    autoComplete="name"
+                    autoComplete="off"
                     placeholder="Alex R."
                     className="w-full bg-surface-container-high border-2 border-black px-3 py-2 font-body text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary-container"
                   />
@@ -125,7 +125,7 @@ export function AuthPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete="off"
                 placeholder="you@example.com"
                 className="w-full bg-surface-container-high border-2 border-black px-3 py-2 font-body text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary-container"
               />
@@ -141,7 +141,7 @@ export function AuthPage() {
                 onChange={e => setPassword(e.target.value)}
                 required
                 minLength={6}
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                autoComplete="off"
                 placeholder="••••••••"
                 className="w-full bg-surface-container-high border-2 border-black px-3 py-2 font-body text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary-container"
               />

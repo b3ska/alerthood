@@ -14,8 +14,8 @@ export function ProfileView() {
     navigate('/auth', { replace: true })
   }
 
-  const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'User'
-  const email = user?.email ?? ''
+  const displayName = profile?.display_name || profile?.username || 'User'
+  const email = profile?.email || user?.email || ''
 
   return (
     <div className="px-4 max-w-2xl mx-auto space-y-8 mt-6">

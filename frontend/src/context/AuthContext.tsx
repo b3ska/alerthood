@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 
 interface Profile {
   id: string
+  email: string | null
   username: string
   display_name: string | null
   avatar_url: string | null
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function fetchProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, karma, trust_score, current_streak')
+      .select('id, email, username, display_name, avatar_url, karma, trust_score, current_streak')
       .eq('id', userId)
       .single()
     setProfile(data ?? null)
@@ -72,11 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { error: profileError } = await supabase.from('profiles').insert({
       id: data.user.id,
+      email,
       username,
       display_name: displayName || null,
     })
     if (profileError) return profileError.message
 
+    await fetchProfile(data.user.id)
     return null
   }
 
