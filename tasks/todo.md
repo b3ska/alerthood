@@ -98,15 +98,15 @@
 ### Dev 3 (Egor) — Novice-Friendly Frontend
 
 **Notifications UI**
-- [ ] Notification bell in `TopBar` with unread count badge
-- [ ] Notification list/dropdown
+- [x] Notification bell in `TopBar` with unread count badge
+- [x] Notification list/dropdown
 
 **Profile & Subscriptions**
 - [ ] Area subscription flow — select/add monitored areas
 - [ ] Notification preference toggles wired to `PATCH /api/subscriptions/{id}/notifications`
 
 **Integration**
-- [ ] "VIEW MAP" on feed cards → navigate to Map centered on that event
+- [x] "VIEW MAP" on feed cards → navigate to Map centered on that event
 
 **Stretch**
 - [ ] Business suggestions along route (static icons)
