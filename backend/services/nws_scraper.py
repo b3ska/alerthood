@@ -24,7 +24,6 @@ SEVERITY_MAP = {
     "Unknown": "low",
 }
 
-# NWS event types → our threat types
 EVENT_TO_THREAT = {
     "Tornado": "natural",
     "Hurricane": "natural",
@@ -63,8 +62,6 @@ async def fetch_nws_alerts() -> list[dict]:
         props = f.get("properties", {})
         geometry = f.get("geometry")
 
-        # NWS alerts often have polygon geometry, not points
-        # Try to get a centroid from the geometry
         lat, lng = None, None
 
         if geometry and geometry.get("type") == "Point":
@@ -72,9 +69,14 @@ async def fetch_nws_alerts() -> list[dict]:
             if len(coords) >= 2:
                 lng, lat = coords[0], coords[1]
         elif geometry and geometry.get("type") == "Polygon":
-            coords = geometry["coordinates"][0]
-            lat = sum(c[1] for c in coords) / len(coords)
-            lng = sum(c[0] for c in coords) / len(coords)
+            try:
+                coords = geometry["coordinates"][0]
+                if not coords:
+                    continue
+                lat = sum(c[1] for c in coords) / len(coords)
+                lng = sum(c[0] for c in coords) / len(coords)
+            except (IndexError, TypeError, ZeroDivisionError):
+                continue
 
         if lat is None or lng is None:
             continue
@@ -86,6 +88,7 @@ async def fetch_nws_alerts() -> list[dict]:
         onset = props.get("onset") or props.get("sent") or datetime.now(timezone.utc).isoformat()
         headline = props.get("headline", event_type)
         description = (props.get("description", "") or "")[:500]
+        alert_id = props.get("id", "")
 
         events.append({
             "title": headline[:200],
@@ -100,6 +103,7 @@ async def fetch_nws_alerts() -> list[dict]:
             "relevance_score": {"critical": 95, "high": 80, "medium": 60, "low": 40}.get(severity, 50),
             "_lat": lat,
             "_lng": lng,
+            "_alert_id": alert_id,
         })
 
     logger.info("Fetched %d weather alerts from NWS", len(events))
@@ -112,11 +116,11 @@ async def run_nws_scraper():
 
     try:
         events = await fetch_nws_alerts()
-    except httpx.HTTPError as e:
-        logger.error("NWS API error: %s", e)
+    except httpx.HTTPStatusError as e:
+        logger.error("NWS API returned HTTP %d: %s", e.response.status_code, e.request.url)
         return
-    except Exception as e:
-        logger.error("NWS scraper failed: %s", e)
+    except httpx.RequestError as e:
+        logger.error("Network error fetching NWS data: %s", e)
         return
 
     if not events:
@@ -125,27 +129,35 @@ async def run_nws_scraper():
 
     matched = []
     for event in events:
-        result = db.rpc("find_nearest_area", {"lat": event["_lat"], "lng": event["_lng"]}).execute()
+        try:
+            result = db.rpc("find_nearest_area", {"lat": event["_lat"], "lng": event["_lng"]}).execute()
+        except Exception:
+            logger.exception("Area matching failed for NWS alert")
+            continue
         area_id = result.data
         if area_id:
             event["area_id"] = area_id
             del event["_lat"]
             del event["_lng"]
+            alert_id = event.pop("_alert_id")
+            # Dedup by source_url
+            if event.get("source_url"):
+                existing = db.table("events").select("id", count="exact").eq("source_type", "nws").eq("source_url", event["source_url"]).execute()
+                if existing.count and existing.count > 0:
+                    continue
             matched.append(event)
-        else:
-            del event["_lat"]
-            del event["_lng"]
 
     if not matched:
         logger.info("No NWS alerts matched any monitored area")
         return
 
     inserted = 0
-    for event in matched:
+    for i in range(0, len(matched), 50):
+        chunk = matched[i : i + 50]
         try:
-            db.table("events").insert(event).execute()
-            inserted += 1
-        except Exception as e:
-            logger.warning("Failed to insert NWS alert: %s", type(e).__name__)
+            db.table("events").insert(chunk).execute()
+            inserted += len(chunk)
+        except Exception:
+            logger.exception("Failed to insert NWS alerts chunk %d-%d", i, i + len(chunk))
 
     logger.info("Inserted %d/%d NWS alerts", inserted, len(matched))

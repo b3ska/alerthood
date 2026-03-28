@@ -48,6 +48,7 @@ async def fetch_weather_alerts(lat: float, lng: float) -> list[dict]:
     settings = get_settings()
 
     if not settings.openweather_api_key:
+        logger.warning("OpenWeatherMap API key not configured, cannot fetch alerts")
         return []
 
     params = {
@@ -62,7 +63,9 @@ async def fetch_weather_alerts(lat: float, lng: float) -> list[dict]:
         if resp.status_code == 401:
             logger.warning("OpenWeatherMap API key invalid or not activated")
             return []
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            logger.error("OpenWeatherMap API returned HTTP %d", resp.status_code)
+            return []
         data = resp.json()
 
     alerts = data.get("alerts", [])
@@ -107,34 +110,39 @@ async def run_openweather_scraper():
 
     db = get_supabase()
 
-    # Get all active areas with their centers
-    areas = (
-        db.table("areas")
-        .select("id, name")
-        .eq("is_active", True)
-        .execute()
-    )
+    try:
+        areas = (
+            db.table("areas")
+            .select("id, name")
+            .eq("is_active", True)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to query areas for OpenWeatherMap scraper")
+        return
 
     if not areas.data:
         return
 
     total_inserted = 0
-
-    # Deduplicate by checking nearby areas (group within ~50km)
     checked_coords = []
 
     for area in areas.data:
-        center = db.rpc("area_center_coords", {"area_id": area["id"]}).execute()
+        try:
+            center = db.rpc("area_center_coords", {"area_id": area["id"]}).execute()
+        except Exception:
+            logger.exception("Failed to get center for area %s", area["name"])
+            continue
+
         if not center.data or len(center.data) == 0:
             continue
 
         lat = center.data[0].get("lat")
         lng = center.data[0].get("lng")
-
         if not lat or not lng:
             continue
 
-        # Skip if we already checked nearby
+        # Skip nearby areas already checked
         skip = False
         for clat, clng in checked_coords:
             if abs(lat - clat) < 0.5 and abs(lng - clng) < 0.5:
@@ -146,8 +154,14 @@ async def run_openweather_scraper():
 
         try:
             alerts = await fetch_weather_alerts(lat, lng)
-        except httpx.HTTPError as e:
-            logger.error("OpenWeatherMap error for %s: %s", area["name"], e)
+        except httpx.HTTPStatusError as e:
+            logger.error("OpenWeatherMap HTTP %d for %s", e.response.status_code, area["name"])
+            continue
+        except httpx.RequestError as e:
+            logger.error("Network error fetching OpenWeatherMap for %s: %s", area["name"], e)
+            continue
+        except Exception:
+            logger.exception("OpenWeatherMap scraper failed for area %s", area["name"])
             continue
 
         for alert in alerts:
@@ -155,7 +169,7 @@ async def run_openweather_scraper():
             try:
                 db.table("events").insert(alert).execute()
                 total_inserted += 1
-            except Exception as e:
-                logger.warning("Failed to insert weather alert: %s", type(e).__name__)
+            except Exception:
+                logger.exception("Failed to insert weather alert for %s", area["name"])
 
     logger.info("OpenWeatherMap scraper: inserted %d alerts", total_inserted)

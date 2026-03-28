@@ -62,6 +62,7 @@ async def fetch_usgs_earthquakes(hours_back: int = 24, min_magnitude: float = 2.
         mag = props.get("mag", 0) or 0
         place = props.get("place", "Unknown location")
         time_ms = props.get("time")
+        usgs_id = f.get("id", "")
 
         occurred_at = (
             datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc).isoformat()
@@ -82,6 +83,7 @@ async def fetch_usgs_earthquakes(hours_back: int = 24, min_magnitude: float = 2.
             "relevance_score": min(100, int(mag * 15)),
             "_lat": lat,
             "_lng": lng,
+            "_dedup_key": f"usgs:{usgs_id}",
         })
 
     logger.info("Fetched %d earthquakes from USGS (M%.1f+ in last %dh)", len(events), min_magnitude, hours_back)
@@ -94,11 +96,11 @@ async def run_usgs_scraper():
 
     try:
         events = await fetch_usgs_earthquakes()
-    except httpx.HTTPError as e:
-        logger.error("USGS API error: %s", e)
+    except httpx.HTTPStatusError as e:
+        logger.error("USGS API returned HTTP %d: %s", e.response.status_code, e.request.url)
         return
-    except Exception as e:
-        logger.error("USGS scraper failed: %s", e)
+    except httpx.RequestError as e:
+        logger.error("Network error fetching USGS data: %s", e)
         return
 
     if not events:
@@ -107,27 +109,34 @@ async def run_usgs_scraper():
 
     matched = []
     for event in events:
-        result = db.rpc("find_nearest_area", {"lat": event["_lat"], "lng": event["_lng"]}).execute()
+        try:
+            result = db.rpc("find_nearest_area", {"lat": event["_lat"], "lng": event["_lng"]}).execute()
+        except Exception:
+            logger.exception("Area matching failed for USGS event")
+            continue
         area_id = result.data
         if area_id:
             event["area_id"] = area_id
             del event["_lat"]
             del event["_lng"]
+            dedup = event.pop("_dedup_key")
+            # Dedup check
+            existing = db.table("events").select("id", count="exact").eq("source_type", "usgs").eq("source_url", event.get("source_url", "")).execute()
+            if existing.count and existing.count > 0:
+                continue
             matched.append(event)
-        else:
-            del event["_lat"]
-            del event["_lng"]
 
     if not matched:
         logger.info("No USGS earthquakes matched any monitored area")
         return
 
     inserted = 0
-    for event in matched:
+    for i in range(0, len(matched), 50):
+        chunk = matched[i : i + 50]
         try:
-            db.table("events").insert(event).execute()
-            inserted += 1
-        except Exception as e:
-            logger.warning("Failed to insert USGS event: %s", type(e).__name__)
+            db.table("events").insert(chunk).execute()
+            inserted += len(chunk)
+        except Exception:
+            logger.exception("Failed to insert USGS events chunk %d-%d", i, i + len(chunk))
 
     logger.info("Inserted %d/%d USGS earthquakes", inserted, len(matched))

@@ -27,11 +27,18 @@ async def scraper_loop():
     while True:
         try:
             logger.info("Running all scrapers...")
-            await run_scraper()
-            await run_usgs_scraper()
-            await run_nws_scraper()
-            await run_uk_police_scraper()
-            await run_openweather_scraper()
+            results = await asyncio.gather(
+                run_scraper(),
+                run_usgs_scraper(),
+                run_nws_scraper(),
+                run_uk_police_scraper(),
+                run_openweather_scraper(),
+                return_exceptions=True,
+            )
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    names = ["GDELT", "USGS", "NWS", "UK Police", "OpenWeather"]
+                    logger.error("%s scraper failed: %s", names[i], result, exc_info=result)
             await refresh_all_scores()
         except Exception:
             logger.exception("Scraper loop iteration failed; will retry next cycle")
