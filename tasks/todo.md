@@ -79,8 +79,24 @@
 - [ ] Full flow test: signup → subscribe → see events on map + feed → toggle notifications
 
 ### Deploy
-- [ ] Frontend → Cloudflare Pages
-- [ ] Backend → FastAPI Cloud
+- [x] Frontend → Cloudflare Pages (wrangler.toml + GitHub Actions CD)
+- [x] Backend → FastAPI Cloud (pyproject.toml + uv + DEPLOY.md guide)
+- [x] CI/CD — GitHub Actions: ruff lint + frontend build on PRs, auto-deploy on push to main
+
+### "Land & Know" Instant Briefing (NEW — The Hook)
+When a traveler lands or checks into their Airbnb, auto-generate a briefing:
+- [ ] `GET /api/briefing?lat=&lng=` — backend endpoint that returns:
+  - Current risk level of their area
+  - Events reported in the last 24hrs nearby
+  - One "watch out for" tip (e.g. pickpockets near the market, avoid X street at night)
+- [ ] Briefing UI component — push notification or bottom sheet on app open
+- [ ] Geofence trigger — detect when user arrives at new location, fire briefing
+
+### Event Data Display (frontend ← backend scrapers)
+Scrapers populate events in DB. Frontend needs to display them:
+- [ ] Wire map markers to real event data (scraper events have lat/lng/severity)
+- [ ] Wire feed to Supabase realtime — new events appear without refresh
+- [ ] Event dedup is handled server-side (by source_url/source_type+time), no frontend work needed
 
 ### Stretch Goals
 - [ ] Safe route display — A* over heatmap grid or colored line between two points
