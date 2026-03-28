@@ -14,8 +14,18 @@ export function ProfileView() {
     navigate('/auth', { replace: true })
   }
 
-  const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'User'
-  const email = user?.email ?? ''
+  const displayName = profile?.display_name || profile?.username || 'User'
+  const email = profile?.email || user?.email || ''
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center pt-32">
+        <span className="material-symbols-outlined text-primary-container text-4xl animate-spin">
+          progress_activity
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="px-4 max-w-2xl mx-auto space-y-8 mt-6">
@@ -33,17 +43,16 @@ export function ProfileView() {
           )}
         </div>
         <h2 className="font-headline text-3xl font-bold uppercase tracking-tight">{displayName}</h2>
-        <p className="font-body text-on-surface-variant text-sm">{email}</p>
         {profile?.username && (
-          <p className="font-body text-on-surface-variant text-xs mt-1">@{profile.username}</p>
+          <p className="font-body text-on-surface-variant text-sm">@{profile.username}</p>
         )}
+        <p className="font-body text-on-surface-variant text-xs mt-0.5">{email}</p>
       </section>
 
       <MetricsBento
         karma={profile?.karma ?? 0}
         karmaWeekly={0}
         trustScore={Number(profile?.trust_score ?? 50)}
-        streakDays={profile?.current_streak ?? 0}
       />
 
       <BadgeGrid badges={MOCK_PROFILE.badges} />

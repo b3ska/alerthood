@@ -14,6 +14,7 @@ export interface Threat {
   minutesAgo: number
   commentCount: number
   upvotes: number
+  downvotes: number
   source: string
 }
 
@@ -51,3 +52,13 @@ export interface UserProfile {
 }
 
 export type TabId = 'map' | 'feed' | 'profile'
+
+export interface Notification {
+  id: string
+  userId: string
+  eventId: string | null
+  title: string
+  body: string | null
+  isRead: boolean
+  createdAt: string
+}

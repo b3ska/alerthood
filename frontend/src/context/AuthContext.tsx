@@ -4,12 +4,12 @@ import { supabase } from '../lib/supabase'
 
 interface Profile {
   id: string
+  email: string | null
   username: string
   display_name: string | null
   avatar_url: string | null
   karma: number
   trust_score: number
-  current_streak: number
 }
 
 interface AuthContextValue {
@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function fetchProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, karma, trust_score, current_streak')
+      .select('id, email, username, display_name, avatar_url, karma, trust_score')
       .eq('id', userId)
       .single()
     setProfile(data ?? null)
@@ -61,7 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   async function signUp(email: string, password: string, username: string, displayName: string): Promise<string | null> {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username, display_name: displayName || null },
+      },
+    })
     if (error) {
       if (error.message.toLowerCase().includes('rate limit') || error.status === 429) {
         return 'Too many sign-up attempts. Please wait a few minutes and try again.'
@@ -70,13 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (!data.user) return 'Sign up failed'
 
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      username,
-      display_name: displayName || null,
-    })
-    if (profileError) return profileError.message
-
+    // Profile is created by the handle_new_user trigger using the metadata above.
+    // Small delay to let the trigger complete before fetching.
+    await new Promise(r => setTimeout(r, 500))
+    await fetchProfile(data.user.id)
     return null
   }
 

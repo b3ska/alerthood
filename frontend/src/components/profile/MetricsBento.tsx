@@ -2,10 +2,9 @@ interface MetricsBentoProps {
   karma: number
   karmaWeekly: number
   trustScore: number
-  streakDays: number
 }
 
-export function MetricsBento({ karma, karmaWeekly, trustScore, streakDays }: MetricsBentoProps) {
+export function MetricsBento({ karma, karmaWeekly, trustScore }: MetricsBentoProps) {
   const progress = `${trustScore}%`
 
   return (
@@ -32,20 +31,6 @@ export function MetricsBento({ karma, karmaWeekly, trustScore, streakDays }: Met
         <span className="font-label text-[10px] font-black uppercase tracking-widest">TRUST SCORE</span>
       </div>
 
-      <div className="col-span-2 bg-secondary-container p-4 border-2 border-black shadow-hard rounded-xl flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span
-            className="material-symbols-outlined text-3xl text-on-secondary-container"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-          >
-            local_fire_department
-          </span>
-          <span className="font-headline text-2xl font-bold text-on-secondary-container uppercase">
-            {streakDays} DAY STREAK
-          </span>
-        </div>
-        <span className="material-symbols-outlined text-on-secondary-container">trending_up</span>
-      </div>
     </section>
   )
 }
