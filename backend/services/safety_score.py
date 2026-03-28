@@ -1,9 +1,13 @@
+import logging
 import math
 from datetime import datetime, timezone
 
+from fastapi import HTTPException, status
 from supabase import Client
 
 from models.schemas import HeatmapCell, TimeBucket
+
+logger = logging.getLogger(__name__)
 
 SEVERITY_WEIGHTS = {"low": 0.25, "medium": 0.5, "high": 0.75, "critical": 1.0}
 
@@ -14,54 +18,59 @@ TIME_BUCKET_HOURS = {
     TimeBucket.night: (0, 6),
 }
 
-# Exponential decay: half-life of 7 days
 HALF_LIFE_DAYS = 7
 
 
-def _recency_weight(occurred_at: str) -> float:
-    ts = datetime.fromisoformat(occurred_at.replace("Z", "+00:00"))
+def _parse_timestamp(occurred_at: str) -> datetime:
+    return datetime.fromisoformat(occurred_at.replace("Z", "+00:00"))
+
+
+def _recency_weight(ts: datetime) -> float:
     age_days = (datetime.now(timezone.utc) - ts).total_seconds() / 86400
     return math.exp(-0.693 * age_days / HALF_LIFE_DAYS)
 
 
-def _matches_time_bucket(occurred_at: str, bucket: TimeBucket) -> bool:
+def _matches_time_bucket(ts: datetime, bucket: TimeBucket) -> bool:
     if bucket == TimeBucket.all:
         return True
-    ts = datetime.fromisoformat(occurred_at.replace("Z", "+00:00"))
     start, end = TIME_BUCKET_HOURS[bucket]
     return start <= ts.hour < end
 
 
-async def compute_heatmap(
+def compute_heatmap(
     db: Client,
     area_id: str,
     time_bucket: TimeBucket,
     grid_size: int = 30,
 ) -> list[HeatmapCell]:
     """Compute heatmap grid cells from events in an area."""
-    # Fetch area center and radius
-    area = db.table("areas").select("*").eq("id", area_id).single().execute()
-    # center is stored as PostGIS geometry — we query events within radius using RPC or filter
-    # For MVP: fetch all active events for this area and grid them in Python
-    events = (
-        db.rpc(
-            "events_in_area",
-            {"target_area_id": area_id},
-        ).execute()
-    )
+    try:
+        events = (
+            db.rpc(
+                "events_in_area",
+                {"target_area_id": area_id},
+            ).execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch events for area %s", area_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Area not found or query failed")
 
     if not events.data:
         return []
 
-    # Filter by time bucket
-    filtered = [e for e in events.data if _matches_time_bucket(e["occurred_at"], time_bucket)]
+    # Parse timestamps once, filter by time bucket
+    parsed = []
+    for e in events.data:
+        ts = _parse_timestamp(e["occurred_at"])
+        if _matches_time_bucket(ts, time_bucket):
+            parsed.append((e, ts))
 
-    if not filtered:
+    if not parsed:
         return []
 
     # Get bounding box from events
-    lats = [e["lat"] for e in filtered]
-    lngs = [e["lng"] for e in filtered]
+    lats = [e["lat"] for e, _ in parsed]
+    lngs = [e["lng"] for e, _ in parsed]
     min_lat, max_lat = min(lats), max(lats)
     min_lng, max_lng = min(lngs), max(lngs)
 
@@ -79,18 +88,16 @@ async def compute_heatmap(
     # Build grid and accumulate weights
     grid: dict[tuple[int, int], dict] = {}
 
-    for event in filtered:
-        row = int((event["lat"] - min_lat) / lat_step)
-        col = int((event["lng"] - min_lng) / lng_step)
-        row = min(row, grid_size - 1)
-        col = min(col, grid_size - 1)
+    for event, ts in parsed:
+        row = min(int((event["lat"] - min_lat) / lat_step), grid_size - 1)
+        col = min(int((event["lng"] - min_lng) / lng_step), grid_size - 1)
 
         key = (row, col)
         if key not in grid:
             grid[key] = {"weight": 0.0, "count": 0}
 
         severity_w = SEVERITY_WEIGHTS.get(event["severity"], 0.5)
-        recency_w = _recency_weight(event["occurred_at"])
+        recency_w = _recency_weight(ts)
         grid[key]["weight"] += severity_w * recency_w
         grid[key]["count"] += 1
 

@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
 
@@ -5,6 +7,7 @@ from auth import get_current_user
 from db import get_supabase
 from models.schemas import NotificationPrefsUpdate, SubscribeRequest, SubscribeResponse
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["areas"])
 
 MAX_FREE_SUBSCRIPTIONS = 2
@@ -33,6 +36,8 @@ async def subscribe_to_area(
         .insert({"user_id": user_id, "area_id": req.area_id, "label": req.label})
         .execute()
     )
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Subscription insert returned no data")
     return SubscribeResponse(subscription_id=result.data[0]["id"])
 
 
@@ -43,14 +48,17 @@ async def update_notification_prefs(
     user_id: str = Depends(get_current_user),
     db: Client = Depends(get_supabase),
 ):
-    # Verify ownership
-    sub = (
-        db.table("user_area_subscriptions")
-        .select("user_id")
-        .eq("id", subscription_id)
-        .single()
-        .execute()
-    )
+    try:
+        sub = (
+            db.table("user_area_subscriptions")
+            .select("user_id")
+            .eq("id", subscription_id)
+            .single()
+            .execute()
+        )
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+
     if sub.data["user_id"] != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your subscription")
 

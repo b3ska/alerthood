@@ -1,6 +1,7 @@
+import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
 
 from auth import get_current_user
@@ -8,12 +9,12 @@ from db import get_supabase
 from models.schemas import (
     EventCreate,
     EventResponse,
-    HeatmapCell,
     HeatmapResponse,
     TimeBucket,
 )
 from services.safety_score import compute_heatmap
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/events", tags=["events"])
 
 
@@ -36,6 +37,8 @@ async def create_event(
         "area_id": event.area_id,
     }
     result = db.table("events").insert(row).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Event insert returned no data")
     data = result.data[0]
     return EventResponse(id=data["id"], created_at=data["created_at"])
 
@@ -46,7 +49,7 @@ async def get_heatmap(
     time_bucket: TimeBucket = TimeBucket.all,
     db: Client = Depends(get_supabase),
 ):
-    cells = await compute_heatmap(db, area_id, time_bucket)
+    cells = compute_heatmap(db, area_id, time_bucket)
     return HeatmapResponse(
         cells=cells,
         time_bucket=time_bucket.value,

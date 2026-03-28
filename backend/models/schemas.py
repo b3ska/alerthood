@@ -35,8 +35,8 @@ class EventCreate(BaseModel):
     threat_type: ThreatType
     severity: SeverityLevel = SeverityLevel.medium
     occurred_at: datetime
-    lat: float
-    lng: float
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
     location_label: str | None = None
     source_type: str = "news"
     source_url: str | None = None
@@ -57,7 +57,7 @@ class HeatmapCell(BaseModel):
 
 class HeatmapResponse(BaseModel):
     cells: list[HeatmapCell]
-    time_bucket: str
+    time_bucket: TimeBucket
     generated_at: datetime
 
 

@@ -4,12 +4,13 @@ Fetches the latest events from GDELT's public GKG (Global Knowledge Graph)
 export files and inserts relevant geolocated events into Supabase.
 
 GDELT updates every 15 minutes with a new CSV export at:
-  http://data.gdeltproject.org/gdeltv2/lastupdate.txt
+  https://data.gdeltproject.org/gdeltv2/lastupdate.txt
 """
 
 import csv
 import io
 import logging
+import urllib.parse
 import zipfile
 from datetime import datetime, timezone
 
@@ -20,7 +21,7 @@ from db import get_supabase
 
 logger = logging.getLogger(__name__)
 
-GDELT_LAST_UPDATE_URL = "http://data.gdeltproject.org/gdeltv2/lastupdate.txt"
+GDELT_LAST_UPDATE_URL = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt"
 
 # CAMEO event codes we care about → our threat_type mapping
 # See: https://www.gdeltproject.org/data/lookups/CAMEO.eventcodes.txt
@@ -55,43 +56,57 @@ CAMEO_TO_THREAT: dict[str, str] = {
 # Minimum Goldstein scale magnitude to include (filters out low-impact events)
 MIN_GOLDSTEIN_MAGNITUDE = -5.0
 
+# GDELT CSV column indices
+class _Col:
+    GLOBAL_EVENT_ID = 0
+    SQLDATE = 1
+    EVENT_CODE = 26
+    GOLDSTEIN_SCALE = 30
+    ACTION_GEO_FULLNAME = 52
+    ACTION_GEO_LAT = 53
+    ACTION_GEO_LONG = 54
+    SOURCE_URL = 57
+
 
 def _goldstein_to_severity(score: float) -> str:
-    """Map GDELT Goldstein scale (-10 to +10) to our severity levels.
-    More negative = more severe conflict.
-    """
+    """Map GDELT Goldstein scale (-10 to +10) to our severity levels."""
     if score <= -8:
         return "critical"
-    elif score <= -5:
+    if score <= -5:
         return "high"
-    elif score <= -2:
+    if score <= -2:
         return "medium"
     return "low"
+
+
+def _validate_gdelt_url(url: str) -> None:
+    """Validate that a URL points to the GDELT domain over HTTPS."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc.endswith("gdeltproject.org"):
+        raise ValueError(f"Untrusted GDELT export URL: {url}")
 
 
 async def fetch_latest_gdelt_events() -> list[dict]:
     """Fetch and parse the latest GDELT v2 event export."""
     async with httpx.AsyncClient(timeout=30) as client:
-        # Get the URL of the latest export file
         resp = await client.get(GDELT_LAST_UPDATE_URL)
         resp.raise_for_status()
 
-        # First line has the export CSV zip URL
-        # Format: "SIZE MD5 URL"
         lines = resp.text.strip().split("\n")
-        export_line = lines[0]  # The events export (first line)
-        export_url = export_line.split()[-1]
+        if not lines:
+            logger.warning("GDELT lastupdate.txt was empty")
+            return []
 
-        # Download the zip
+        export_url = lines[0].split()[-1]
+        _validate_gdelt_url(export_url)
+
         zip_resp = await client.get(export_url)
         zip_resp.raise_for_status()
 
-        # Extract CSV from zip
         with zipfile.ZipFile(io.BytesIO(zip_resp.content)) as zf:
             csv_filename = zf.namelist()[0]
             csv_data = zf.read(csv_filename).decode("utf-8", errors="replace")
 
-    # Parse CSV (GDELT v2 export is tab-delimited, no header)
     events = []
     reader = csv.reader(io.StringIO(csv_data), delimiter="\t")
 
@@ -99,39 +114,41 @@ async def fetch_latest_gdelt_events() -> list[dict]:
         if len(row) < 58:
             continue
 
-        event_code = row[26]  # EventCode (CAMEO)
+        event_code = row[_Col.EVENT_CODE]
         threat_type = CAMEO_TO_THREAT.get(event_code)
         if not threat_type:
             continue
 
-        # Must have geolocation
         try:
-            lat = float(row[53])  # ActionGeo_Lat
-            lng = float(row[54])  # ActionGeo_Long
+            lat = float(row[_Col.ACTION_GEO_LAT])
+            lng = float(row[_Col.ACTION_GEO_LONG])
         except (ValueError, IndexError):
             continue
 
-        # Skip events with 0,0 coordinates (missing geolocation)
         if lat == 0.0 and lng == 0.0:
             continue
 
-        goldstein = float(row[30]) if row[30] else 0.0
+        try:
+            goldstein = float(row[_Col.GOLDSTEIN_SCALE]) if row[_Col.GOLDSTEIN_SCALE] else 0.0
+        except ValueError:
+            continue
+
         if goldstein > MIN_GOLDSTEIN_MAGNITUDE:
             continue
 
-        # Parse date (YYYYMMDD format)
         try:
-            date_str = row[1]  # SQLDATE
+            date_str = row[_Col.SQLDATE]
             occurred_at = datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=timezone.utc)
         except (ValueError, IndexError):
-            occurred_at = datetime.now(timezone.utc)
+            logger.debug("Skipping GDELT event with unparseable date: %s", row[_Col.GLOBAL_EVENT_ID])
+            continue
 
-        location_label = row[52] if len(row) > 52 else None  # ActionGeo_FullName
-        source_url = row[57] if len(row) > 57 else None       # SOURCEURL
+        location_label = row[_Col.ACTION_GEO_FULLNAME] if len(row) > _Col.ACTION_GEO_FULLNAME else None
+        source_url = row[_Col.SOURCE_URL] if len(row) > _Col.SOURCE_URL else None
 
         events.append({
             "title": f"{threat_type.title()}: {location_label or 'Unknown location'}",
-            "description": f"Source: GDELT event {row[0]}. Goldstein scale: {goldstein}",
+            "description": f"Source: GDELT event {row[_Col.GLOBAL_EVENT_ID]}. Goldstein scale: {goldstein}",
             "threat_type": threat_type,
             "severity": _goldstein_to_severity(goldstein),
             "occurred_at": occurred_at.isoformat(),
@@ -152,17 +169,30 @@ async def run_scraper():
 
     try:
         events = await fetch_latest_gdelt_events()
-        if not events:
-            logger.info("No new events from GDELT")
-            return
+    except httpx.HTTPStatusError as e:
+        logger.error("GDELT returned HTTP %d: %s", e.response.status_code, e.request.url)
+        return
+    except httpx.RequestError as e:
+        logger.error("Network error fetching GDELT data: %s", e)
+        return
+    except zipfile.BadZipFile:
+        logger.error("GDELT export file was corrupted")
+        return
+    except ValueError as e:
+        logger.error("GDELT URL validation failed: %s", e)
+        return
 
-        # Batch insert (Supabase handles duplicates gracefully)
-        # Insert in chunks of 50
-        for i in range(0, len(events), 50):
-            chunk = events[i : i + 50]
+    if not events:
+        logger.info("No new events from GDELT")
+        return
+
+    inserted = 0
+    for i in range(0, len(events), 50):
+        chunk = events[i : i + 50]
+        try:
             db.table("events").insert(chunk).execute()
+            inserted += len(chunk)
+        except Exception:
+            logger.exception("Failed to insert chunk %d-%d of %d events", i, i + len(chunk), len(events))
 
-        logger.info("Inserted %d events into Supabase", len(events))
-
-    except Exception:
-        logger.exception("Scraper failed")
+    logger.info("Inserted %d/%d events into Supabase", inserted, len(events))

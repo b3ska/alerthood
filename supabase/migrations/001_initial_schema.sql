@@ -158,7 +158,8 @@ create policy "Areas are viewable by everyone" on public.areas for select using 
 
 -- Events: anyone can read, service role inserts (scraper)
 create policy "Events are viewable by everyone" on public.events for select using (true);
-create policy "Service role can insert events" on public.events for insert with check (true);
+-- Service role (scraper) bypasses RLS. No insert policy needed for regular users in MVP.
+-- Future: add user insert policy when user-created events are enabled.
 
 -- Subscriptions: users manage own
 create policy "Users can view own subscriptions" on public.user_area_subscriptions for select using (auth.uid() = user_id);
