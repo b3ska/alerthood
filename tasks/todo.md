@@ -6,6 +6,8 @@ AlertHood is a neighborhood safety app showing safe/unsafe areas on a heatmap, w
 
 **Tech stack:** React + TypeScript + Vite + Tailwind (frontend), FastAPI + Python (backend), Supabase (Postgres + PostGIS + Auth + Realtime), MapLibre GL JS (maps, CartoDB Dark Matter tiles — free, no API key).
 
+**Deploy:** Cloudflare Pages (frontend), FastAPI Cloud (backend), Supabase Cloud (database).
+
 **Architecture:** "Thin API + Supabase Direct" — reads via Supabase JS client (including realtime), writes via FastAPI for business logic.
 
 ---
@@ -262,7 +264,7 @@ create trigger on_auth_user_created
 1. Notification bell in `TopAppBar` with unread count badge
 2. "VIEW MAP" on feed cards → navigate to Map centered on that event
 3. Full flow test: signup → subscribe → see events on map + feed → toggle notifications
-4. Deploy: Vite → Vercel/Netlify, FastAPI → Railway/Fly.io (or local for demo)
+4. Deploy: Frontend → Cloudflare Pages, Backend → FastAPI Cloud
 
 ---
 
