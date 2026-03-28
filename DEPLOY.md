@@ -14,16 +14,16 @@
 
 ### Prerequisites
 - Python 3.11+
-- `fastapi[standard]` installed (includes `fastapi-cli`)
+- [uv](https://docs.astral.sh/uv/) package manager
 - FastAPI Cloud private beta access
 
 ### Deploy
 
 ```bash
 cd backend
-pip install -r requirements.txt
-fastapi login
-fastapi deploy
+uv sync
+uv run fastapi login
+uv run fastapi deploy
 ```
 
 ### Environment Variables (set in FastAPI Cloud dashboard)
@@ -32,7 +32,7 @@ fastapi deploy
 |----------|-------------|---------|
 | `SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | Service role key (NOT anon key) | `eyJ...` |
-| `SUPABASE_JWT_SECRET` | JWT secret from Supabase settings | `your-jwt-secret` |
+| `SUPABASE_JWT_SECRET` | JWT secret from Supabase settings (legacy, unused with JWKS) | `your-jwt-secret` |
 | `CORS_ORIGINS` | JSON array of allowed origins | `["https://alerthood.pages.dev"]` |
 | `SCRAPER_INTERVAL_MINUTES` | Scrape cycle interval | `15` |
 | `DEMO_CITY` | Default city for scrapers | `Chicago` |
@@ -119,8 +119,8 @@ Auto-deploys frontend to Cloudflare Pages on push to `main` (only when `frontend
 # Backend
 cd backend
 cp .env.example .env  # fill in real values
-pip install -r requirements.txt
-fastapi dev
+uv sync
+uv run fastapi dev
 
 # Frontend
 cd frontend

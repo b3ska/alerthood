@@ -14,13 +14,9 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-      - run: pip install -r requirements.txt
-      - run: pip install ruff
-      - run: ruff check .
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - run: uv run ruff check .
 
   frontend-build:
     runs-on: ubuntu-latest
