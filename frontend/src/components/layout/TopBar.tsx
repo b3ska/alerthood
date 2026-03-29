@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../hooks/useNotifications'
 import { NotificationPanel } from './NotificationPanel'
@@ -8,9 +8,12 @@ export function TopBar() {
   const { user, profile } = useAuth()
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(user?.id ?? null)
   const [isOpen, setIsOpen] = useState(false)
+  const { pathname } = useLocation()
+
+  const isAuthPage = pathname === '/auth'
 
   return (
-    <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-background border-b-2 border-black shadow-hard">
+    <nav className={`fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-background border-b-2 border-black shadow-hard${isAuthPage ? ' hidden sm:flex' : ''}`}>
       <div className="flex items-center gap-3">
         <span
           className="material-symbols-outlined text-primary-container"
