@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from geopy.exc import GeocoderServiceError
+from geopy.exc import GeopyError
 from geopy.geocoders import Nominatim
 
 from db import get_supabase
@@ -35,7 +35,7 @@ async def geocode_location(location_text: str, city: str) -> tuple[float, float]
         result = await asyncio.to_thread(
             _nominatim.geocode, query, country_codes="bg", timeout=10
         )
-    except GeocoderServiceError as e:
+    except GeopyError as e:
         logger.warning("Nominatim error for %r: %s", query, e)
         return None
     if result is None:
