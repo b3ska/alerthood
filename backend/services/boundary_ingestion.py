@@ -82,6 +82,11 @@ async def ingest_neighborhoods_for_city(city_id: str, country_code: str) -> int:
         return 0
 
     bbox = bbox_result.data
+    if isinstance(bbox, list):
+        if not bbox:
+            return 0
+        bbox = bbox[0]
+        
     min_lat = bbox["min_lat"]
     min_lng = bbox["min_lng"]
     max_lat = bbox["max_lat"]
