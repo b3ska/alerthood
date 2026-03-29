@@ -76,7 +76,7 @@ async def ingest_neighborhoods_for_city(city_id: str, country_code: str) -> int:
         return 0
 
     # Use the bbox RPC to get the bounding box
-    bbox_result = sb.rpc("area_bbox", {"area_id": city_id}).execute()
+    bbox_result = sb.rpc("area_bbox", {"target_area_id": city_id}).execute()
     if not bbox_result.data:
         logger.warning("No bbox for city %s", city_id)
         return 0

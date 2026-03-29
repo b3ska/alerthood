@@ -16,9 +16,6 @@ import os
 
 logger = logging.getLogger(__name__)
 
-DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://openrouter.ai/api/v1")
-DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek/deepseek-chat")
-
 _THREAT_TYPES = {"crime", "disturbance", "infrastructure"}
 _SEVERITY_LEVELS = {"low", "medium", "high", "critical"}
 
@@ -49,9 +46,12 @@ _STAGE2_SYSTEM = (
 def _get_client():
     """Return a lazily-constructed OpenAI-compatible client pointed at DeepSeek."""
     from openai import AsyncOpenAI  # deferred to avoid import cost when unused
+    from config import get_settings
 
-    api_key = os.environ.get("DEEPSEEK_API_KEY", "")
-    return AsyncOpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL)
+    settings = get_settings()
+    api_key = settings.deepseek_api_key
+    base_url = settings.deepseek_base_url
+    return AsyncOpenAI(api_key=api_key, base_url=base_url)
 
 
 async def filter_relevant_titles(items: list[dict]) -> list[int]:
@@ -67,11 +67,13 @@ async def filter_relevant_titles(items: list[dict]) -> list[int]:
         return []
 
     client = _get_client()
+    from config import get_settings
+    settings = get_settings()
     prompt = json.dumps(items, ensure_ascii=False)
 
     try:
         response = await client.chat.completions.create(
-            model=DEEPSEEK_MODEL,
+            model=settings.deepseek_model,
             messages=[
                 {"role": "system", "content": _STAGE1_SYSTEM},
                 {"role": "user", "content": prompt},
@@ -100,11 +102,13 @@ async def extract_event(title: str, text: str) -> dict | None:
         Returns None if DeepSeek cannot extract a location or the API call fails.
     """
     client = _get_client()
+    from config import get_settings
+    settings = get_settings()
     user_content = f"Title: {title}\n\nText:\n{text[:4000]}"  # guard against huge articles
 
     try:
         response = await client.chat.completions.create(
-            model=DEEPSEEK_MODEL,
+            model=settings.deepseek_model,
             messages=[
                 {"role": "system", "content": _STAGE2_SYSTEM},
                 {"role": "user", "content": user_content},
