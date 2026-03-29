@@ -1,6 +1,8 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+from postgrest.exceptions import APIError
 
 from db import get_supabase
 
@@ -38,20 +40,38 @@ def _score_to_color(score: float) -> str:
     return "#22c55e"
 
 
+def _fetch_per_area_sync(sb, areas_data: list, poverty_by_id: dict) -> list:
+    """Fallback: compute crime stats one area at a time (original approach)."""
+    since = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+    rates = []
+    for area in areas_data:
+        area_id = area["id"]
+        result = (
+            sb.table("events")
+            .select("id", count="exact")
+            .eq("area_id", area_id)
+            .eq("threat_type", "crime")
+            .gte("occurred_at", since)
+            .execute()
+        )
+        crime_count = result.count or 0
+        area_result = sb.rpc("area_size_km2", {"target_area_id": area_id}).execute()
+        area_km2 = (area_result.data[0]["area_km2"] if area_result.data else 0) or 1.0
+        rates.append((area_id, crime_count, crime_count / area_km2))
+    return rates
+
+
 def _fetch_all_scores_sync() -> int:
     """
     Synchronous core of refresh_all_scores.
 
-    Replaces N×2 individual Supabase HTTP calls (one events query + one
-    area_size_km2 RPC per area) with two total calls:
-      1. area_crime_stats_batch RPC — crime counts + km² for all areas in one SQL query
-      2. areas.upsert — write all scores in one batch
-
-    This prevents HTTP/2 connection pool exhaustion when there are many areas.
+    Tries the batch RPC first (2 total HTTP calls). If the migration hasn't
+    been applied yet (PGRST202), falls back to the original per-area approach
+    so the scraper keeps running.
     """
     sb = get_supabase()
 
-    # 1. Fetch poverty_index per area (lightweight, single request)
+    # 1. Fetch poverty_index per area
     areas_resp = (
         sb.table("areas")
         .select("id, poverty_index")
@@ -66,21 +86,31 @@ def _fetch_all_scores_sync() -> int:
         for a in areas_resp.data
     }
 
-    # 2. Single batch RPC: crime counts + area sizes for all active areas
-    stats_resp = sb.rpc("area_crime_stats_batch", {"since_days": 90}).execute()
-    if not stats_resp.data:
-        logger.warning("area_crime_stats_batch returned no data")
-        return 0
-
-    rates = []
-    for row in stats_resp.data:
-        area_km2 = float(row["area_km2"] or 1.0)
-        crime_count = int(row["crime_count"] or 0)
-        rates.append((row["area_id"], crime_count, crime_count / area_km2))
+    # 2a. Try the fast batch RPC
+    try:
+        stats_resp = sb.rpc("area_crime_stats_batch", {"since_days": 90}).execute()
+        if not stats_resp.data:
+            logger.warning("area_crime_stats_batch returned no data")
+            return 0
+        rates = [
+            (row["area_id"], int(row["crime_count"] or 0),
+             int(row["crime_count"] or 0) / float(row["area_km2"] or 1.0))
+            for row in stats_resp.data
+        ]
+    except APIError as e:
+        if e.code == "PGRST202":
+            # Migration not yet applied — fall back gracefully
+            logger.warning(
+                "area_crime_stats_batch RPC not found; run migration "
+                "20260329_area_crime_stats_batch.sql. Falling back to per-area queries."
+            )
+            rates = _fetch_per_area_sync(sb, areas_resp.data, poverty_by_id)
+        else:
+            raise
 
     max_rate = max((r for _, _, r in rates), default=1.0) or 1.0
-
     now = datetime.now(timezone.utc).isoformat()
+
     rows = []
     for area_id, crime_count, crime_rate in rates:
         score = compute_safety_score(
@@ -97,7 +127,6 @@ def _fetch_all_scores_sync() -> int:
             "score_updated_at": now,
         })
 
-    # 3. Single upsert for all areas
     try:
         sb.table("areas").upsert(rows, on_conflict="id").execute()
         updated = len(rows)
