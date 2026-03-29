@@ -1,15 +1,15 @@
 """One-off script to replace synthetic circle areas with real OSM boundaries.
 
 Run: python3 -m reingest_boundaries
- """
+"""
 
 import asyncio
 import logging
 
 from db import get_supabase
- from services.overpass import fetch_city_boundary, fetch_neighborhoods_in_bbox
+from services.boundary_ingestion import ingest_all_cities, ingest_neighborhoods_for_city
 
- OVERpass_rate_limit_seconds = 5
+OVERPASS_RATE_LIMIT_SECONDS = 5
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -18,35 +18,35 @@ logger = logging.getLogger(__name__)
 async def main():
     sb = get_supabase()
 
-    # Step 1: Create proper city entries from existing area names
+    # Step 1: Fetch boundaries for all existing cities
     logger.info("=== Step 1: Ingesting city boundaries from OSM ===")
-    city_ids = await ingest_cities_from_existing()
-    if not city_ids:
-        logger.warning("No cities ingested — aborting")
+    results = await ingest_all_cities()
+    logger.info("City ingestion results: %s", results)
+    if not results.get("updated"):
+        logger.warning("No cities updated — aborting")
         return
 
     # Step 2: Ingest neighborhoods for each city
-    logger.info("=== Step 2: Ingesting neighborhood boundaries for %d cities ===", len(city_ids))
+    cities = (
+        sb.table("areas")
+        .select("id, name, country_code")
+        .eq("area_type", "city")
+        .eq("is_active", True)
+        .execute()
+    )
+    logger.info("=== Step 2: Ingesting neighborhood boundaries for %d cities ===", len(cities.data or []))
     total_neighborhoods = 0
-    for city_name, city_id in city_ids.items():
-        city_row = (
-            sb.table("areas")
-            .select("country_code")
-            .eq("id", city_id)
-            .single()
-            .execute()
-        )
-        cc = city_row.data["country_code"]
+    for city in (cities.data or []):
+        cc = city.get("country_code", "")
         if not cc:
-            logger.warning("No country_code for city %s — skipping neighborhoods", city_name)
+            logger.warning("No country_code for city %s — skipping neighborhoods", city["name"])
             continue
-        count = await ingest_neighborhoods_for_city(city_id, cc)
+        count = await ingest_neighborhoods_for_city(city["id"], cc)
         total_neighborhoods += count
-        logger.info("  %s: %d neighborhoods", city_name, count)
-        await asyncio.sleep(OVERPASS_RATE_limit_seconds)
+        logger.info("  %s: %d neighborhoods", city["name"], count)
+        await asyncio.sleep(OVERPASS_RATE_LIMIT_SECONDS)
 
-    # Step 3: Cleanup
- nullify event references, old areas, delete old areas
+    # Step 3: Cleanup — nullify event references, delete old areas
     logger.info("=== Step 3: Cleaning up old synthetic areas ===")
     # Nullify area_id on events pointing to old areas
     events_result = (
