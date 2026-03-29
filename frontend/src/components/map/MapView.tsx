@@ -103,7 +103,6 @@ function NeighborhoodLayer({ onDistrictClick }: { onDistrictClick: (props: Neigh
     if (!map.getPane('neighborhoodPane')) {
       const pane = map.createPane('neighborhoodPane')
       pane.style.zIndex = '200'
-      pane.style.pointerEvents = 'none'
     }
   }, [map])
 
@@ -146,7 +145,6 @@ function NeighborhoodLayer({ onDistrictClick }: { onDistrictClick: (props: Neigh
           fillColor: color,
           fillOpacity: 0.1,
           opacity: 0.8,
-          interactive: false,
           pane: 'neighborhoodPane',
         }
       }}
