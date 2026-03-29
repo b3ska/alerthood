@@ -41,7 +41,7 @@ export function AreaSummaryView() {
   const [events, setEvents] = useState<Threat[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
 
-  // Request geolocation on mount
+  // Start geolocation + events loading in parallel on mount
   useEffect(() => {
     if (!navigator.geolocation) {
       setGeoState('denied')
@@ -58,14 +58,7 @@ export function AreaSummaryView() {
     )
   }, [])
 
-  // Detect area once we have coords
   useEffect(() => {
-    if (coords) detect(coords.lat, coords.lng)
-  }, [coords, detect])
-
-  // Load events once area is known
-  useEffect(() => {
-    if (!area) return
     let cancelled = false
     setEventsLoading(true)
 
@@ -102,9 +95,15 @@ export function AreaSummaryView() {
       })
 
     return () => { cancelled = true }
-  }, [area])
+  }, [])
 
-  const isLoading = geoState === 'requesting' || areaLoading || scoresLoading || eventsLoading
+  // Detect area once we have coords
+  useEffect(() => {
+    if (coords) detect(coords.lat, coords.lng)
+  }, [coords, detect])
+
+  // Only block on geolocation — events and scores load in parallel
+  const isBlocked = geoState === 'requesting'
 
   const areaScore = area
     ? scores.find((s) => s.area_id === area.id) ?? null
@@ -145,7 +144,7 @@ export function AreaSummaryView() {
   }
 
   // ─── Loading state ────────────────────────────────────────────────────────
-  if (isLoading) {
+  if (isBlocked) {
     return (
       <div className="px-4 max-w-2xl mx-auto mt-24 flex flex-col items-center gap-3">
         <span className="material-symbols-outlined text-4xl text-on-surface-variant opacity-50 animate-pulse">
@@ -158,8 +157,8 @@ export function AreaSummaryView() {
     )
   }
 
-  // ─── No area found ────────────────────────────────────────────────────────
-  if (!area) {
+  // ─── No area found (geolocation resolved but area detection failed) ────
+  if (!area && !areaLoading) {
     return (
       <div className="px-4 max-w-2xl mx-auto mt-24 flex flex-col items-center gap-3 text-center">
         <span className="material-symbols-outlined text-5xl text-on-surface-variant opacity-40">
@@ -175,41 +174,58 @@ export function AreaSummaryView() {
     )
   }
 
-  const areaName = (area.name as string).toUpperCase()
+  const areaName = area ? (area.name as string).toUpperCase() : null
 
-  // ─── Main content ─────────────────────────────────────────────────────────
+  // ─── Main content (progressive — shows events before area resolves) ───────
   return (
     <div className="px-4 max-w-2xl mx-auto space-y-6 pb-4">
       {/* 5.1 Area Header */}
-      <div className="flex flex-wrap items-center gap-3 pt-2">
-        <div>
-          <h1 className="font-headline font-bold text-2xl uppercase tracking-tight text-on-surface leading-none">
-            {areaName}
-          </h1>
+      {areaName ? (
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <div>
+            <h1 className="font-headline font-bold text-2xl uppercase tracking-tight text-on-surface leading-none">
+              {areaName}
+            </h1>
+          </div>
+          <span
+            className="flex items-center gap-1.5 font-headline font-bold text-xs uppercase tracking-widest px-3 py-1 rounded-full"
+            style={{ backgroundColor: risk.bg, color: risk.text }}
+          >
+            <span className="w-2 h-2 rounded-full block" style={{ backgroundColor: risk.text }} />
+            {risk.label}
+          </span>
         </div>
-        <span
-          className="flex items-center gap-1.5 font-headline font-bold text-xs uppercase tracking-widest px-3 py-1 rounded-full"
-          style={{ backgroundColor: risk.bg, color: risk.text }}
-        >
-          <span className="w-2 h-2 rounded-full block" style={{ backgroundColor: risk.text }} />
-          {risk.label}
-        </span>
-      </div>
+      ) : (
+        <div className="pt-2">
+          <div className="h-8 w-48 bg-on-surface/5 animate-pulse" />
+        </div>
+      )}
 
       {/* 5.2 Safety Score Hero */}
-      <SafetyScoreGauge
-        score={Math.round(score)}
-        updatedAt={areaScore?.score_updated_at ?? null}
-      />
+      {area ? (
+        <SafetyScoreGauge
+          score={Math.round(score)}
+          updatedAt={areaScore?.score_updated_at ?? null}
+        />
+      ) : (
+        <div className="h-40 bg-on-surface/5 animate-pulse rounded" />
+      )}
 
       {/* 5.3 Active Alert (conditional) */}
       {activeAlert && <ActiveAlertCard event={activeAlert} />}
 
       {/* 5.4 Mini Heatmap */}
-      <MiniHeatmap center={mapCenter} events={recentEvents} />
+      {!eventsLoading && recentEvents.length > 0 && (
+        <MiniHeatmap center={mapCenter} events={recentEvents} />
+      )}
 
       {/* 5.5 Recent Incidents */}
-      <RecentIncidentsList events={recentEvents} />
+      {!eventsLoading && recentEvents.length > 0 && (
+        <RecentIncidentsList events={recentEvents} />
+      )}
+      {eventsLoading && (
+        <div className="h-32 bg-on-surface/5 animate-pulse rounded" />
+      )}
 
       {/* 5.6 AI Brief Placeholder */}
       <AIBriefPlaceholder />
