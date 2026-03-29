@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiGetPublic } from '../lib/api'
 
 interface NeighborhoodProperties {
   id: string
@@ -30,7 +31,6 @@ interface Bounds {
 }
 
 const DEBOUNCE_MS = 300
-const API_URL = import.meta.env.VITE_API_URL
 
 export function useNeighborhoods(bounds: Bounds | null, zoom: number) {
   const [geojson, setGeojson] = useState<FeatureCollection | null>(null)
@@ -40,16 +40,13 @@ export function useNeighborhoods(bounds: Bounds | null, zoom: number) {
   const fetchNeighborhoods = useCallback(async (b: Bounds, z: number) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({
+      const data = await apiGetPublic<FeatureCollection>('/api/neighborhoods', {
         min_lat: String(b.minLat),
         min_lng: String(b.minLng),
         max_lat: String(b.maxLat),
         max_lng: String(b.maxLng),
         zoom: String(Math.round(z)),
       })
-      const res = await fetch(`${API_URL}/api/neighborhoods?${params}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data: FeatureCollection = await res.json()
       setGeojson(data)
     } catch (err) {
       console.error('Failed to fetch neighborhoods:', err)

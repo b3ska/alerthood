@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-const BASE_URL = import.meta.env.VITE_API_URL
+const BASE_URL = import.meta.env.VITE_API_URL || window.location.origin
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const { data: { session } } = await supabase.auth.getSession()
@@ -11,6 +11,18 @@ async function getAuthHeaders(): Promise<HeadersInit> {
     'Authorization': `Bearer ${session.access_token}`,
     'Content-Type': 'application/json',
   }
+}
+
+export async function apiGetPublic<T>(path: string, params?: Record<string, string>): Promise<T> {
+  const url = new URL(path, BASE_URL)
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, v)
+    }
+  }
+  const res = await fetch(url.toString())
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }
 
 export async function apiGet<T>(path: string, params?: Record<string, string>): Promise<T> {
