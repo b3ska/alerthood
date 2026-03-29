@@ -3,8 +3,6 @@
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from services.ai_extractor import extract_event, filter_relevant_titles
 
 
