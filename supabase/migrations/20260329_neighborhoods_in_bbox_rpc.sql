@@ -24,13 +24,13 @@ RETURNS TABLE (
     a.crime_count AS event_count_90d,
     p.name AS parent_name,
     extensions.st_asgeojson(
-      extensions.st_simplify(
+      extensions.st_simplifypreservetopology(
         a.boundary,
         CASE
           WHEN zoom_level >= 15 THEN 0.00001
           WHEN zoom_level >= 12 THEN 0.0001
           WHEN zoom_level >= 10 THEN 0.001
-          ELSE 0.01
+          ELSE 0.005
         END
       )
     ) AS geojson
