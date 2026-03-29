@@ -2,8 +2,6 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from services.bg_news_scraper import _dedup, _fetch_feed, _parse_pub_date
 
 
