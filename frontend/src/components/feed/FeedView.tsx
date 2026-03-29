@@ -40,11 +40,7 @@ export function FeedView() {
       setLoading(true)
 
       const { data: events } = await supabase
-        .from('events')
-        .select('id, title, threat_type, severity, relevance_score, occurred_at, location_label, source_type, location')
-        .eq('status', 'active')
-        .order('occurred_at', { ascending: false })
-        .limit(50)
+        .rpc('events_with_coords', { max_rows: 50 })
 
       if (!events || events.length === 0) {
         setItems([])
@@ -88,8 +84,8 @@ export function FeedView() {
               severityPct: SEVERITY_PCT[e.severity] ?? 50,
               relevancePct: e.relevance_score,
               location: e.location_label ?? '',
-              lat: e.location?.coordinates?.[1] ?? 0,
-              lng: e.location?.coordinates?.[0] ?? 0,
+              lat: e.lat ?? 0,
+              lng: e.lng ?? 0,
               minutesAgo,
               upvotes: upMap[e.id] ?? 0,
               downvotes: downMap[e.id] ?? 0,
@@ -151,7 +147,7 @@ export function FeedView() {
               key={item.threat.id}
               threat={item.threat}
               initialVote={item.userVote}
-              onViewMap={(t) => navigate(`/map?lat=${t.lat}&lng=${t.lng}`)}
+              onViewMap={(t) => navigate('/map', { state: { lat: t.lat, lng: t.lng } })}
             />
           ))
         )}

@@ -1,9 +1,27 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from 'react-leaflet'
+import { supabase } from '../../lib/supabase'
+import type { Threat, ThreatCategory, ThreatSeverity } from '../../types'
 import { useHeatmap } from '../../hooks/useHeatmap'
 import { MonitoredZone } from './MonitoredZone'
+import { ThreatMarker } from './ThreatMarker'
+import { AlertBottomSheet } from './AlertBottomSheet'
 import { MOCK_PROFILE } from '../../data/mock'
+
+const THREAT_TYPE_MAP: Record<string, ThreatCategory> = {
+  crime: 'CRIME',
+  infrastructure: 'UTILITY',
+  disturbance: 'DISTURBANCE',
+  natural: 'NATURAL',
+}
+
+const SEVERITY_PCT: Record<string, number> = {
+  low: 25,
+  medium: 50,
+  high: 75,
+  critical: 95,
+}
 
 const MAP_CENTER: [number, number] = [41.882, -87.631]
 const MAP_ZOOM = 14
@@ -29,19 +47,42 @@ function FlyTo({ position }: { position: [number, number] }) {
 }
 
 export function MapView() {
-  const [searchParams] = useSearchParams()
+  const { state: navState } = useLocation()
   const [userPos, setUserPos] = useState<[number, number] | null>(null)
+  const [flyTo, setFlyTo] = useState<[number, number] | null>(
+    navState?.lat && navState?.lng ? [navState.lat, navState.lng] : null
+  )
+  const [threats, setThreats] = useState<Threat[]>([])
+  const [selectedThreat, setSelectedThreat] = useState<Threat | null>(null)
   const homeArea = MOCK_PROFILE.areas.find((a) => a.name === 'HOME')
   const { cells, loading } = useHeatmap(homeArea?.id ?? null)
 
-  const targetLat = searchParams.get('lat')
-  const targetLng = searchParams.get('lng')
-  const flyTarget: [number, number] | null =
-    targetLat && targetLng ? [parseFloat(targetLat), parseFloat(targetLng)] : null
+  useEffect(() => {
+    supabase.rpc('events_with_coords', { max_rows: 100 }).then(({ data, error }) => {
+      if (error || !data) return
+      setThreats(
+        (data as any[]).map((e) => ({
+          id: e.id,
+          title: e.title,
+          category: THREAT_TYPE_MAP[e.threat_type] ?? 'CRIME',
+          severity: (e.severity as string).toUpperCase() as ThreatSeverity,
+          severityPct: SEVERITY_PCT[e.severity as string] ?? 50,
+          relevancePct: e.relevance_score ?? 0,
+          location: e.location_label ?? '',
+          lat: e.lat,
+          lng: e.lng,
+          minutesAgo: Math.max(0, Math.floor((Date.now() - new Date(e.occurred_at).getTime()) / 60000)),
+          upvotes: 0,
+          downvotes: 0,
+          source: e.source_type ?? '',
+        } as Threat))
+      )
+    })
+  }, [])
 
   function locateUser() {
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+      (pos) => { setFlyTo(null); setUserPos([pos.coords.latitude, pos.coords.longitude]) },
       () => { /* permission denied or unavailable — keep default center */ },
       { enableHighAccuracy: true, timeout: 10000 },
     )
@@ -66,7 +107,8 @@ export function MapView() {
         >
           <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
 
-          {flyTarget ? <FlyTo position={flyTarget} /> : userPos && <FlyTo position={userPos} />}
+          {flyTo && <FlyTo position={flyTo} />}
+          {!flyTo && userPos && <FlyTo position={userPos} />}
 
           {userPos && (
             <>
@@ -84,6 +126,15 @@ export function MapView() {
           )}
 
           {homeArea && <MonitoredZone area={homeArea} />}
+
+          {threats.map((threat) => (
+            <ThreatMarker
+              key={threat.id}
+              threat={threat}
+              onSelect={setSelectedThreat}
+              isSelected={selectedThreat?.id === threat.id}
+            />
+          ))}
 
           {cells.map((cell, i) => (
             <CircleMarker
@@ -111,6 +162,14 @@ export function MapView() {
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-surface-container border-2 border-black px-4 py-2 shadow-hard-sm">
           <span className="font-headline text-xs uppercase tracking-widest">Loading heatmap...</span>
         </div>
+      )}
+
+      {selectedThreat && (
+        <AlertBottomSheet
+          threat={selectedThreat}
+          onClose={() => setSelectedThreat(null)}
+          onViewDetails={() => setSelectedThreat(null)}
+        />
       )}
 
       <button
